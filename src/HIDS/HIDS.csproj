@@ -4,6 +4,10 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <LangVersion>8</LangVersion>
     <Nullable>enable</Nullable>
+    <Authors>Stephen Wills</Authors>
+    <Company>Grid Protection Alliance</Company>
+    <RepositoryUrl>https://github.com/GridProtectionAlliance/HIDSAPI</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/GridProtectionAlliance/HIDSAPI</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
