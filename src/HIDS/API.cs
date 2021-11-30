@@ -170,7 +170,7 @@ namespace HIDS
             {
                 Tag = record.GetValueByKey("tag")?.ToString(),
                 Timestamp = StripTimeZone(record.GetTimeInDateTime().GetValueOrDefault()),
-                QualityFlags = Convert.ToUInt32(record.GetValueByKey("flags") ?? 0u),
+                QualityFlags = Convert.ToUInt32(record.GetValueByKey("flags") ?? 0),
                 Minimum = Convert.ToDouble(record.GetValueByKey("min") ?? double.NaN),
                 Maximum = Convert.ToDouble(record.GetValueByKey("max") ?? double.NaN),
                 Average = Convert.ToDouble(record.GetValueByKey("avg") ?? double.NaN)
