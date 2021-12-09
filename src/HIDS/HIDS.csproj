@@ -9,6 +9,8 @@
     <Company>Grid Protection Alliance</Company>
     <RepositoryUrl>https://github.com/GridProtectionAlliance/HIDSAPI</RepositoryUrl>
     <PackageProjectUrl>https://github.com/GridProtectionAlliance/HIDSAPI</PackageProjectUrl>
+    <Version>1.0.2</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
