@@ -1,6 +1,7 @@
 using HIDS;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace HIDSTests
@@ -8,25 +9,22 @@ namespace HIDSTests
     [TestClass]
     public class SimpleTests
     {
-        private static string TestURL = "http://192.168.112.221:8086/";
-        private static string TestTag = "GPA.TestDevice.TestTrend";
-
-        private readonly API m_api = new API();
-
-        public SimpleTests()
-        {
-            m_api.PointBucket = "point_bucket";
-            m_api.TokenID = "UDkd27OFOoxHOjQfgl-HcMvymA8F02-jIK-6Ozi1lrIdViyMrq114by4Nbpul0AzwEMb7EgaaZ5mdR36HhtwMQ==";
-            m_api.Connect(TestURL);
-        }
+        private static string TestURL { get; } = "http://vmhidsdev:8086/";
+        private static string TestTag { get; } = "GPA.TestDevice.TestTrend";
+        private static string TestBucket { get; } = "test_bucket";
+        private static string TestOrganization { get; } = "gpa";
+        private static string TestToken { get; } = "tJwORIjY-qdtZ13K9xBmBqEYfEczSb_GYuKLO1vVqS7o11nHtZ5aQDT87pgSFO6SYkBxh9nadtBVfvcIrkNoeQ==";
 
         public TestContext TestContext { get; set; }
 
         [TestMethod]
         public void WriteTest()
         {
+            using API hids = Connect();
+
             TestContext.WriteLine("Starting write...");
-            Task writeTask = m_api.WritePointsAsync(new[] { new Point { Tag = TestTag, Minimum = 1.0D, Maximum = 10.0D, Average = 5.0D, QualityFlags = 7u, Timestamp = DateTime.UtcNow } });
+
+            Task writeTask = hids.WritePointsAsync(new[] { new Point { Tag = TestTag, Minimum = 1.0D, Maximum = 10.0D, Average = 5.0D, QualityFlags = 7u, Timestamp = DateTime.UtcNow } });
             writeTask.GetAwaiter().GetResult();
 
             TestContext.WriteLine("Write complete.");
@@ -35,7 +33,15 @@ namespace HIDSTests
         [TestMethod]
         public void ReadTest()
         {
+            using API hids = Connect();
+
             TestContext.WriteLine("Starting read...");
+
+            async Task ReadTestAsync()
+            {
+                await foreach (Point point in hids.ReadPointsAsync(BuildQuery))
+                    TestContext.WriteLine($"Point = {point.Tag} with Max = {point.Maximum}, Min = {point.Minimum}, Avg = {point.Average} @ {point.Timestamp}");
+            }
 
             Task readTask = ReadTestAsync();
             readTask.GetAwaiter().GetResult();
@@ -43,14 +49,44 @@ namespace HIDSTests
             TestContext.WriteLine("Read complete.");
         }
 
-        private async Task ReadTestAsync()
+        [TestMethod]
+        public void StreamTest()
         {
-            static void BuildQuery(IQueryBuilder queryBuilder) => queryBuilder
-                .Range("-48h")
-                .FilterTags(new[] { TestTag });
+            TestContext.WriteLine("Starting stream...");
 
-            await foreach (Point point in m_api.ReadPointsAsync(BuildQuery))
-                TestContext.WriteLine($"Point = {point.Tag} with Max = {point.Maximum}, Min = {point.Minimum}, Avg = {point.Average} @ {point.Timestamp}");
+            using (PointStream stream = PointStream.QueryPoints(Connect, BuildQuery))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                while (true)
+                {
+                    string line = reader.ReadLine();
+
+                    if (line is null)
+                        break;
+
+                    TestContext.WriteLine(line);
+                }
+            }
+
+            TestContext.WriteLine("Stream complete.");
         }
+
+        private API Connect()
+        {
+            API hids = new API();
+            hids.PointBucket = TestBucket;
+            hids.OrganizationID = TestOrganization;
+            hids.TokenID = TestToken;
+
+            TestContext.WriteLine("Connecting...");
+            hids.Connect(TestURL);
+            TestContext.WriteLine("Connected.");
+
+            return hids;
+        }
+
+        private void BuildQuery(IQueryBuilder builder) => builder
+            .Range("-48h")
+            .FilterTags(new[] { TestTag });
     }
 }
