@@ -96,11 +96,10 @@ namespace HIDS
             clauses.Add(RangeClause);
             clauses.Add($"filter(fn: (r) => r._measurement == \"point\")");
 
-            IEnumerable<string> tagConditionals = IncludedTags.Select(tag => $"r.tag == \"{tag}\"");
-            string tagExpression = string.Join(" or ", tagConditionals);
+            string tagExpression = string.Join("|", IncludedTags);
 
             if (tagExpression.Length > 0)
-                clauses.Add($"filter(fn: (r) => {tagExpression})");
+                clauses.Add($"filter(fn: (r) => r.tag =~ /{tagExpression}/)");
 
             IEnumerable<string> timeConditionals = ExcludedTimes
                 .Select(ToConditional)
@@ -167,11 +166,10 @@ namespace HIDS
             clauses.Add($"filter(fn: (r) => r._measurement == \"point\")");
             clauses.Add($"filter(fn: (r) => r._field == \"flags\")");
 
-            IEnumerable<string> tagConditionals = IncludedTags.Select(tag => $"r.tag == \"{tag}\"");
-            string tagExpression = string.Join(" or ", tagConditionals);
+            string tagExpression = string.Join("|", IncludedTags);
 
             if (tagExpression.Length > 0)
-                clauses.Add($"filter(fn: (r) => {tagExpression})");
+                clauses.Add($"filter(fn: (r) => r.tag =~ /{tagExpression}/)");
 
             IEnumerable<string> timeConditionals = ExcludedTimes
                 .Select(ToConditional)
