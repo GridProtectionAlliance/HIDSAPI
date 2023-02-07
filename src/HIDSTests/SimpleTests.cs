@@ -20,33 +20,36 @@ namespace HIDSTests
         [TestMethod]
         public void WriteTest()
         {
-            using API hids = Connect();
+            async Task WriteTestAsync()
+            {
+                using API hids = await ConnectAsync();
 
-            TestContext.WriteLine("Starting write...");
+                TestContext.WriteLine("Starting write...");
+                await hids.WritePointsAsync(new[] { new Point { Tag = TestTag, Minimum = 1.0D, Maximum = 10.0D, Average = 5.0D, QualityFlags = 0u, Timestamp = DateTime.UtcNow } });
+                TestContext.WriteLine("Write complete.");
+            }
 
-            Task writeTask = hids.WritePointsAsync(new[] { new Point { Tag = TestTag, Minimum = 1.0D, Maximum = 10.0D, Average = 5.0D, QualityFlags = 7u, Timestamp = DateTime.UtcNow } });
+            Task writeTask = WriteTestAsync();
             writeTask.GetAwaiter().GetResult();
-
-            TestContext.WriteLine("Write complete.");
         }
 
         [TestMethod]
         public void ReadTest()
         {
-            using API hids = Connect();
-
-            TestContext.WriteLine("Starting read...");
-
             async Task ReadTestAsync()
             {
+                using API hids = await ConnectAsync();
+
+                TestContext.WriteLine("Starting read...");
+
                 await foreach (Point point in hids.ReadPointsAsync(BuildQuery))
                     TestContext.WriteLine($"Point = {point.Tag} with Max = {point.Maximum}, Min = {point.Minimum}, Avg = {point.Average} @ {point.Timestamp}");
+
+                TestContext.WriteLine("Read complete.");
             }
 
             Task readTask = ReadTestAsync();
             readTask.GetAwaiter().GetResult();
-
-            TestContext.WriteLine("Read complete.");
         }
 
         [TestMethod]
@@ -54,7 +57,7 @@ namespace HIDSTests
         {
             TestContext.WriteLine("Starting stream...");
 
-            using (PointStream stream = PointStream.QueryPoints(Connect, BuildQuery))
+            using (PointStream stream = PointStream.QueryPoints(ConnectAsync, BuildQuery))
             using (StreamReader reader = new StreamReader(stream))
             {
                 while (true)
@@ -71,7 +74,7 @@ namespace HIDSTests
             TestContext.WriteLine("Stream complete.");
         }
 
-        private API Connect()
+        private async Task<API> ConnectAsync()
         {
             API hids = new API();
             hids.PointBucket = TestBucket;
@@ -79,7 +82,7 @@ namespace HIDSTests
             hids.TokenID = TestToken;
 
             TestContext.WriteLine("Connecting...");
-            hids.Connect(TestURL);
+            await hids.ConnectAsync(TestURL);
             TestContext.WriteLine("Connected.");
 
             return hids;
