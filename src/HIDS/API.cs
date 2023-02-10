@@ -55,7 +55,7 @@ namespace HIDS
             set => m_token = value.ToCharArray();
         }
 
-        public void Connect(string influxDBHost)
+        public async Task ConnectAsync(string influxDBHost)
         {
             InfluxDBClientOptions options = InfluxDBClientOptions.Builder.CreateNew()
                 .Url(influxDBHost)
@@ -63,7 +63,19 @@ namespace HIDS
                 .TimeOut(Timeout.InfiniteTimeSpan)
                 .Build();
 
-            m_client = InfluxDBClientFactory.Create(options);
+            InfluxDBClient client = InfluxDBClientFactory.Create(options);
+
+            try
+            {
+                // Query the version to see
+                // if the server is responding
+                await client.VersionAsync();
+                m_client = client;
+            }
+            catch
+            {
+                client.Dispose();
+            }
         }
 
         public void Disconnect()

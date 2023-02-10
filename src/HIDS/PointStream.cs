@@ -61,16 +61,23 @@ namespace HIDS
                 if (IsDisposed)
                     return;
 
-                CancellationTokenSource.Cancel();
+                try
+                {
+                    CancellationTokenSource.Cancel();
 
-                Enumerator
-                    .DisposeAsync()
-                    .AsTask()
-                    .GetAwaiter()
-                    .GetResult();
+                    Enumerator
+                        .DisposeAsync()
+                        .AsTask()
+                        .GetAwaiter()
+                        .GetResult();
 
-                HIDS.Dispose();
-                CancellationTokenSource.Dispose();
+                    HIDS.Dispose();
+                    CancellationTokenSource.Dispose();
+                }
+                finally
+                {
+                    IsDisposed = true;
+                }
             }
         }
 
@@ -78,7 +85,7 @@ namespace HIDS
 
         private int m_position;
 
-        private Lazy<State> LazyState { get; }
+        private Lazy<Task<State>> LazyState { get; }
         private Lazy<AsyncBufferHandler> LazyBufferHandler { get; }
         private bool IsDisposed { get; set; }
 
@@ -95,12 +102,15 @@ namespace HIDS
             set => throw new NotSupportedException();
         }
 
-        private PointStream(Func<API> hidsFactory, Action<IQueryBuilder> configureQuery, bool pointCountQuery)
+        private PointStream(Func<Task<API>> hidsFactory, Action<IQueryBuilder> configureQuery, bool pointCountQuery)
         {
-            State CreateState() =>
-                new State(hidsFactory(), configureQuery, pointCountQuery);
+            async Task<State> CreateStateAsync()
+            {
+                API hids = await hidsFactory();
+                return new State(hids, configureQuery, pointCountQuery);
+            }
 
-            LazyState = new Lazy<State>(CreateState);
+            LazyState = new Lazy<Task<State>>(CreateStateAsync);
             LazyBufferHandler = new Lazy<AsyncBufferHandler>(CreateBufferHandler);
         }
 
@@ -147,7 +157,7 @@ namespace HIDS
         {
             ThrowIfDisposed();
 
-            State state = LazyState.Value;
+            Task<State> stateTask = LazyState.Value;
             Encoding encoding = new UTF8Encoding(false);
             Encoder encoder = encoding.GetEncoder();
 
@@ -166,6 +176,7 @@ namespace HIDS
                 {
                     if (charOffset >= chars.Length)
                     {
+                        State state = await stateTask;
                         IAsyncEnumerator<object> enumerator = state.Enumerator;
 
                         if (!await enumerator.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -246,9 +257,15 @@ namespace HIDS
         }
 
         public static PointStream QueryPoints(Func<API> hidsFactory, Action<IQueryBuilder> configureQuery) =>
-            new PointStream(hidsFactory, configureQuery, false);
+            new PointStream(() => Task.FromResult(hidsFactory()), configureQuery, false);
 
         public static PointStream QueryPointCount(Func<API> hidsFactory, Action<IQueryBuilder> configureQuery) =>
+            new PointStream(() => Task.FromResult(hidsFactory()), configureQuery, true);
+
+        public static PointStream QueryPoints(Func<Task<API>> hidsFactory, Action<IQueryBuilder> configureQuery) =>
+            new PointStream(hidsFactory, configureQuery, false);
+
+        public static PointStream QueryPointCount(Func<Task<API>> hidsFactory, Action<IQueryBuilder> configureQuery) =>
             new PointStream(hidsFactory, configureQuery, true);
     }
 }
