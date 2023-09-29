@@ -90,7 +90,7 @@ namespace HIDS
         public string BuildPointQuery()
         {
             List<string> imports = new List<string>(4);
-            List<string> clauses = new List<string>(16);
+            List<string> clauses = new List<string>(16) { };
 
             clauses.Add(FromClause);
             clauses.Add(RangeClause);
@@ -159,7 +159,7 @@ namespace HIDS
         public string BuildCountQuery()
         {
             List<string> imports = new List<string>(4);
-            List<string> clauses = new List<string>(16);
+            List<string> clauses = new List<string>(16) { };
 
             clauses.Add(FromClause);
             clauses.Add(RangeClause);
