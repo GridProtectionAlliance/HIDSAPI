@@ -71,6 +71,8 @@ namespace HIDS
             PointData point = PointData
                 .Measurement("histogram")
                 .Tag("tag", histogram.Info.Tag)
+                .Field("fundamentalFrequency", histogram.Info.FundamentalFrequency)
+                .Field("samplingRate", histogram.Info.SamplingRate)
                 .Timestamp(startTime, WritePrecision.S)
                 .Field("endTime", endTime.Ticks)
                 .Field("cyclesMax", histogram.Info.CyclesMax)
