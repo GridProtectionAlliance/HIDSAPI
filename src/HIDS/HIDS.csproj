@@ -10,7 +10,7 @@
     <RepositoryUrl>https://github.com/GridProtectionAlliance/HIDSAPI</RepositoryUrl>
     <PackageProjectUrl>https://github.com/GridProtectionAlliance/HIDSAPI</PackageProjectUrl>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
