@@ -105,7 +105,10 @@ namespace HIDS
             List<string> clauses = new List<string>(16) { };
 
             clauses.Add(FromClause);
-            clauses.Add(RangeClause);
+
+            if (string.IsNullOrEmpty(RangeClause)) clauses.Add(FormClauseFromRangeFilters(Ranges));
+            else clauses.Add(RangeClause);
+
             clauses.Add($"filter(fn: (r) => r._measurement == \"point\")");
 
             string tagExpression = string.Join("|", IncludedTags);
@@ -174,7 +177,10 @@ namespace HIDS
             List<string> clauses = new List<string>(16) { };
 
             clauses.Add(FromClause);
-            clauses.Add(RangeClause);
+
+            if (string.IsNullOrEmpty(RangeClause)) clauses.Add(FormClauseFromRangeFilters(Ranges));
+            else clauses.Add(RangeClause);
+
             clauses.Add($"filter(fn: (r) => r._measurement == \"point\")");
             clauses.Add($"filter(fn: (r) => r._field == \"flags\")");
 
@@ -223,6 +229,22 @@ namespace HIDS
             string importSection = string.Join("\n", imports);
             string querySection = string.Join("\n  |> ", clauses);
             return $"{importSection}\n{querySection}".Trim();
+        }
+
+        private string FormClauseFromRangeFilters(IEnumerable<Tuple<DateTime, DateTime>> rangeFilters)
+        {
+            if (rangeFilters.Count() == 0) return string.Empty;
+
+            Tuple<DateTime, DateTime> rangeBounds = rangeFilters.Aggregate((bounds, tested) =>
+            {
+                DateTime lowestStart = bounds.Item1;
+                if (tested.Item1 < bounds.Item1) lowestStart = tested.Item1;
+                DateTime highestEnd = bounds.Item2;
+                if (tested.Item2 > bounds.Item2) highestEnd = tested.Item2;
+                return new Tuple<DateTime, DateTime>(lowestStart, highestEnd);
+            });
+
+            return $"range(start: {API.FormatTimestamp(rangeBounds.Item1)}, stop: {API.FormatTimestamp(rangeBounds.Item2)})";
         }
 
         private string ToConditional(TimeFilter filter)
