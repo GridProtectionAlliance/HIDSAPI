@@ -92,8 +92,10 @@ namespace HIDS
             QueryBuilder queryBuilder = new QueryBuilder(PointBucket);
             configureQuery(queryBuilder);
 
+            // Must exract and use multiple time ranges seperately due to influxDB not supporting multiple time ranges
             string query = queryBuilder.BuildPointQuery();
-            return ReadPointsAsync(query, cancellationToken);
+            IEnumerable<Tuple<DateTime, DateTime>> ranges = queryBuilder.GetTimeRanges();
+            return ReadPointsAsync(query, ranges, cancellationToken);
         }
 
         public IAsyncEnumerable<PointCount> ReadPointCountAsync(Action<IQueryBuilder> configureQuery, CancellationToken cancellationToken = default)
@@ -101,35 +103,43 @@ namespace HIDS
             QueryBuilder queryBuilder = new QueryBuilder(PointBucket);
             configureQuery(queryBuilder);
 
+            // Must exract and use multiple time ranges seperately due to influxDB not supporting multiple time ranges
             string query = queryBuilder.BuildCountQuery();
-            return ReadPointCountAsync(query, cancellationToken);
+            IEnumerable<Tuple<DateTime, DateTime>> ranges = queryBuilder.GetTimeRanges();
+            return ReadPointCountAsync(query, ranges, cancellationToken);
         }
 
-        public IAsyncEnumerable<Point> ReadPointsAsync(string fluxQuery, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<Point> ReadPointsAsync(string fluxQuery, IEnumerable<Tuple<DateTime, DateTime>>? timeRanges = null, CancellationToken cancellationToken = default)
         {
-            IAsyncEnumerable<FluxRecord> fluxRecords = ReadFluxRecordsAsync(fluxQuery, cancellationToken);
+            IAsyncEnumerable<Point> fluxRecords = ReadFluxRecordsAsync(fluxQuery, cancellationToken)
+                .Select(record => new Point()
+                {
+                    Tag = record.GetValueByKey("tag")?.ToString(),
+                    Timestamp = StripTimeZone(record.GetTimeInDateTime().GetValueOrDefault()),
+                    QualityFlags = Convert.ToUInt32(record.GetValueByKey("flags") ?? 0),
+                    Minimum = Convert.ToDouble(record.GetValueByKey("min") ?? double.NaN),
+                    Maximum = Convert.ToDouble(record.GetValueByKey("max") ?? double.NaN),
+                    Average = Convert.ToDouble(record.GetValueByKey("avg") ?? double.NaN)
+                });
 
-            return fluxRecords.Select(record => new Point()
-            {
-                Tag = record.GetValueByKey("tag")?.ToString(),
-                Timestamp = StripTimeZone(record.GetTimeInDateTime().GetValueOrDefault()),
-                QualityFlags = Convert.ToUInt32(record.GetValueByKey("flags") ?? 0),
-                Minimum = Convert.ToDouble(record.GetValueByKey("min") ?? double.NaN),
-                Maximum = Convert.ToDouble(record.GetValueByKey("max") ?? double.NaN),
-                Average = Convert.ToDouble(record.GetValueByKey("avg") ?? double.NaN)
-            });
+            if (timeRanges is null || timeRanges.Count() == 0) return fluxRecords;
+                
+            return fluxRecords.Where(point => timeRanges.Any(range => point.Timestamp >= range.Item1 && point.Timestamp <= range.Item2));
         }
 
-        public IAsyncEnumerable<PointCount> ReadPointCountAsync(string fluxQuery, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<PointCount> ReadPointCountAsync(string fluxQuery, IEnumerable<Tuple<DateTime, DateTime>>? timeRanges = null, CancellationToken cancellationToken = default)
         {
-            IAsyncEnumerable<FluxRecord> fluxRecords = ReadFluxRecordsAsync(fluxQuery, cancellationToken);
+            IAsyncEnumerable<PointCount> fluxRecords = ReadFluxRecordsAsync(fluxQuery, cancellationToken)
+                .Select(record => new PointCount()
+                {
+                    Tag = record.GetValueByKey("tag")?.ToString(),
+                    Timestamp = StripTimeZone(record.GetTimeInDateTime().GetValueOrDefault()),
+                    Count = Convert.ToUInt64(record.GetValue())
+                });
 
-            return fluxRecords.Select(record => new PointCount()
-            {
-                Tag = record.GetValueByKey("tag")?.ToString(),
-                Timestamp = StripTimeZone(record.GetTimeInDateTime().GetValueOrDefault()),
-                Count = Convert.ToUInt64(record.GetValue())
-            });
+            if (timeRanges is null || timeRanges.Count() == 0) return fluxRecords;
+
+            return fluxRecords.Where(point => timeRanges.Any(range => point.Timestamp >= range.Item1 && point.Timestamp <= range.Item2));
         }
     }
 }

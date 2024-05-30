@@ -30,6 +30,7 @@ namespace HIDS
     internal class QueryBuilder : IQueryBuilder
     {
         private string FromClause { get; }
+        private IEnumerable<Tuple<DateTime, DateTime>> Ranges { get; set; } = Enumerable.Empty<Tuple<DateTime, DateTime>>();
         private string RangeClause { get; set; } = string.Empty;
         private IEnumerable<string> IncludedTags { get; set; } = Enumerable.Empty<string>();
         private IEnumerable<TimeFilter> ExcludedTimes { get; set; } = Enumerable.Empty<TimeFilter>();
@@ -54,6 +55,12 @@ namespace HIDS
         public IQueryBuilder Range(string start, string stop)
         {
             RangeClause = $"range(start: {start}, stop: {stop})";
+            return this;
+        }
+
+        public IQueryBuilder RangeFilters (IEnumerable<Tuple<DateTime, DateTime>> ranges)
+        {
+            Ranges = ranges;
             return this;
         }
 
@@ -85,6 +92,11 @@ namespace HIDS
         {
             AggregationDuration = duration;
             return this;
+        }
+
+        public IEnumerable<Tuple<DateTime, DateTime>> GetTimeRanges()
+        {
+            return Ranges;
         }
 
         public string BuildPointQuery()

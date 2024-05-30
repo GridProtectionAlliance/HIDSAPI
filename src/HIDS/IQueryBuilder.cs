@@ -32,12 +32,14 @@ namespace HIDS
         IQueryBuilder Range(DateTime startTime, DateTime stopTime);
         IQueryBuilder Range(string start);
         IQueryBuilder Range(string start, string stop);
+        IQueryBuilder RangeFilters(IEnumerable<Tuple<DateTime, DateTime>> ranges);
         IQueryBuilder FilterTags(params string[] includedTags);
         IQueryBuilder FilterTags(IEnumerable<string> includedTags);
         IQueryBuilder FilterTime(params TimeFilter[] filters);
         IQueryBuilder FilterTime(IEnumerable<TimeFilter> filters);
         IQueryBuilder TestQuality(uint invalidFlags);
         IQueryBuilder Aggregate(string duration);
+        IEnumerable<Tuple<DateTime, DateTime>> GetTimeRanges();
         string BuildPointQuery();
         string BuildCountQuery();
     }
