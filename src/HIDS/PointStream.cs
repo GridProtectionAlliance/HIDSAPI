@@ -56,6 +56,18 @@ namespace HIDS
                 CancellationTokenSource = cancellationTokenSource;
             }
 
+            public State(API hids, Func<API, CancellationToken, IAsyncEnumerable<object>> queryFunc)
+            {
+                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+                IAsyncEnumerable<object> enumerable = queryFunc(hids, cancellationToken);
+
+                HIDS = hids;
+                Enumerator = enumerable.GetAsyncEnumerator(cancellationToken);
+                CancellationTokenSource = cancellationTokenSource;
+            }
+
             public void Dispose()
             {
                 if (IsDisposed)
@@ -108,6 +120,18 @@ namespace HIDS
             {
                 API hids = await hidsFactory();
                 return new State(hids, configureQuery, pointCountQuery);
+            }
+
+            LazyState = new Lazy<Task<State>>(CreateStateAsync);
+            LazyBufferHandler = new Lazy<AsyncBufferHandler>(CreateBufferHandler);
+        }
+
+        private PointStream(Func<Task<API>> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<object>> queryFunc)
+        {
+            async Task<State> CreateStateAsync()
+            {
+                API hids = await hidsFactory();
+                return new State(hids, queryFunc);
             }
 
             LazyState = new Lazy<Task<State>>(CreateStateAsync);
@@ -267,5 +291,16 @@ namespace HIDS
 
         public static PointStream QueryPointCount(Func<Task<API>> hidsFactory, Action<IQueryBuilder> configureQuery) =>
             new PointStream(hidsFactory, configureQuery, true);
+
+        public static PointStream QueryPoints(Func<API> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<Point>> queryFunc) =>
+            new PointStream(() => Task.FromResult(hidsFactory()), queryFunc);
+
+        public static PointStream QueryPointCount(Func<API> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<PointCount>> queryFunc) =>
+            new PointStream(() => Task.FromResult(hidsFactory()), queryFunc);
+        public static PointStream QueryPoints(Func<Task<API>> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<Point>> queryFunc) =>
+            new PointStream(hidsFactory, queryFunc);
+
+        public static PointStream QueryPointCount(Func<Task<API>> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<PointCount>> queryFunc) =>
+            new PointStream(hidsFactory, queryFunc);
     }
 }
