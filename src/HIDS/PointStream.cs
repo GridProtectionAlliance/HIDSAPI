@@ -297,6 +297,7 @@ namespace HIDS
 
         public static PointStream QueryPointCount(Func<API> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<PointCount>> queryFunc) =>
             new PointStream(() => Task.FromResult(hidsFactory()), queryFunc);
+
         public static PointStream QueryPoints(Func<Task<API>> hidsFactory, Func<API, CancellationToken, IAsyncEnumerable<Point>> queryFunc) =>
             new PointStream(hidsFactory, queryFunc);
 
